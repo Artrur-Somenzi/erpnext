@@ -399,7 +399,9 @@ def get_packed_serial_nos(main_item_row, pi_row, pl_row):
 	qty = cint(pi_row.qty)
 	if len(serial_nos) < qty and pl_row.serial_no:
 		delivered = (
-			get_delivered_component_serial_nos(main_item_row, pl_row) if pl_row.delivered_qty else set()
+			get_delivered_component_serial_nos(main_item_row, pl_row)
+			if pl_row.serial_no and pl_row.delivered_qty
+			else set()
 		)
 		kept = {number.lower() for number in serial_nos}
 		pending = get_serial_nos(get_pending_serial_nos(pl_row, {pl_row.name: delivered}))
