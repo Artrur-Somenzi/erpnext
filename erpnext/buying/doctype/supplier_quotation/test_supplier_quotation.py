@@ -200,6 +200,52 @@ class TestPurchaseOrder(FrappeTestCase):
 
 		po.insert()
 
+<<<<<<< HEAD
+=======
+	def test_purchase_order_mapping_replaces_existing_taxes(self):
+		tax = {
+			"charge_type": "On Net Total",
+			"account_head": "_Test Account Excise Duty - _TC",
+			"description": "Excise Duty",
+			"rate": 10,
+			"cost_center": "_Test Cost Center - _TC",
+		}
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0])
+		sq.set("taxes", [tax])
+		sq.submit()
+		target = frappe.new_doc("Purchase Order", supplier=sq.supplier, company=sq.company)
+		target.append("taxes", tax)
+
+		po = make_purchase_order(sq.name, target.as_dict())
+
+		self.assertEqual(len(po.taxes), 1)
+
+	@ERPNextTestSuite.change_settings("Buying Settings", {"allow_zero_qty_in_supplier_quotation": 1})
+	def test_map_purchase_order_from_zero_qty_supplier_quotation(self):
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0])
+		sq.items[0].qty = 0
+		sq.submit()
+
+		po = make_purchase_order(sq.name)
+		self.assertEqual(len(po.get("items")), 1)
+		self.assertEqual(po.get("items")[0].qty, 0)
+		self.assertEqual(po.get("items")[0].item_code, sq.get("items")[0].item_code)
+
+	@ERPNextTestSuite.change_settings("Stock Settings", {"allow_to_edit_stock_uom_qty_for_purchase": 1})
+	def test_map_purchase_order_qty_in_quoted_uom(self):
+		from erpnext.stock.doctype.item.test_item import make_item
+
+		item = make_item(
+			properties={"stock_uom": "Kg"}, uoms=[{"uom": "Box", "conversion_factor": 0.333333333}]
+		)
+		sq = frappe.copy_doc(self.globalTestRecords["Supplier Quotation"][0])
+		sq.items[0].update({"item_code": item.name, "qty": 1, "uom": "Box", "conversion_factor": 0.333333333})
+		sq.submit()
+
+		po = make_purchase_order(sq.name)
+		self.assertEqual(po.items[0].qty, 1)
+
+>>>>>>> be0721e (test: map the rest of a source row to a purchase order in its own UOM)
 	def test_quotation_drops_terms_not_applicable_to_selling(self):
 		quotation = self.make_quotation_with_terms(selling=0)
 		quotation.insert()
