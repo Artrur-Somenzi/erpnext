@@ -15,7 +15,6 @@ from erpnext.accounts.doctype.sales_invoice.sales_invoice import (
 	update_linked_doc,
 	validate_inter_company_party,
 )
-<<<<<<< HEAD
 from erpnext.accounts.doctype.tax_withholding_category.tax_withholding_category import (
 	get_party_tax_withholding_details,
 )
@@ -23,15 +22,6 @@ from erpnext.accounts.party import get_party_account, get_party_account_currency
 from erpnext.buying.utils import check_on_hold_or_closed_status, validate_for_items
 from erpnext.controllers.buying_controller import BuyingController
 from erpnext.controllers.mapper import get_qty_already_mapped
-=======
-from erpnext.accounts.party import get_party_account_currency
-from erpnext.buying.doctype.purchase_order.services.drop_ship import DropShipService
-from erpnext.buying.doctype.purchase_order.services.status import StatusService
-from erpnext.buying.doctype.purchase_order.services.subcontracting import SubcontractingService
-from erpnext.buying.utils import validate_for_items
-from erpnext.controllers.buying_controller import BuyingController, get_stock_qty_status_args
-from erpnext.controllers.taxes_and_totals import remove_margin
->>>>>>> 0e77c8d (fix(buying): add up a Purchase Order's ordered qty from qty × conversion factor)
 from erpnext.manufacturing.doctype.blanket_order.blanket_order import (
 	validate_against_blanket_order,
 )
@@ -194,24 +184,9 @@ class PurchaseOrder(BuyingController):
 				"target_parent_dt": "Material Request",
 				"target_parent_field": "per_ordered",
 				"target_ref_field": "stock_qty",
-				**get_stock_qty_status_args(),
+				"source_field": "stock_qty",
 				"percent_join_field": "material_request",
-<<<<<<< HEAD
 			}
-=======
-				"global_allowance_field": "over_order_allowance",
-				"global_allowance_doctype": "Buying Settings",
-				"item_allowance_field": "over_order_allowance",
-			},
-			{
-				"source_dt": "Purchase Order Item",
-				"target_dt": "Supplier Quotation Item",
-				"join_field": "supplier_quotation_item",
-				"target_field": "ordered_qty",
-				"target_ref_field": "stock_qty",
-				**get_stock_qty_status_args(),
-			},
->>>>>>> 0e77c8d (fix(buying): add up a Purchase Order's ordered qty from qty × conversion factor)
 		]
 
 	def onload(self):
@@ -652,11 +627,7 @@ class PurchaseOrder(BuyingController):
 		pass
 
 	def update_status_updater(self):
-		self.status_updater.extend(self.get_sales_order_status_updater())
-
-	@staticmethod
-	def get_sales_order_status_updater():
-		return [
+		self.status_updater.append(
 			{
 				"source_dt": "Purchase Order Item",
 				"target_dt": "Sales Order Item",
@@ -665,10 +636,10 @@ class PurchaseOrder(BuyingController):
 				"target_parent_field": "",
 				"join_field": "sales_order_item",
 				"target_ref_field": "stock_qty",
-				**get_stock_qty_status_args(
-					frappe.get_single_value("Stock Settings", "allow_to_edit_stock_uom_qty_for_sales")
-				),
-			},
+				"source_field": "stock_qty",
+			}
+		)
+		self.status_updater.append(
 			{
 				"source_dt": "Purchase Order Item",
 				"target_dt": "Packed Item",
@@ -677,9 +648,9 @@ class PurchaseOrder(BuyingController):
 				"target_parent_field": "",
 				"join_field": "sales_order_packed_item",
 				"target_ref_field": "qty",
-				**get_stock_qty_status_args(),
-			},
-		]
+				"source_field": "stock_qty",
+			}
+		)
 
 	def update_delivered_qty_in_sales_order(self):
 		"""Update delivered qty in Sales Order for drop ship"""
@@ -754,10 +725,11 @@ class PurchaseOrder(BuyingController):
 		return result
 
 	def update_ordered_qty_in_so_for_removed_items(self, removed_items):
-		"""Recalculate the ordered qty of Sales Order rows linked to rows removed through Update Items."""
-		if not removed_items:
+		"""
+		Updates ordered_qty in linked SO when item rows are removed using Update Items
+		"""
+		if not self.is_against_so():
 			return
-<<<<<<< HEAD
 		for item in removed_items:
 			prev_ordered_qty = flt(
 				frappe.get_cached_value("Sales Order Item", item.get("sales_order_item"), "ordered_qty")
@@ -766,12 +738,6 @@ class PurchaseOrder(BuyingController):
 			frappe.db.set_value(
 				"Sales Order Item", item.get("sales_order_item"), "ordered_qty", prev_ordered_qty - item.qty
 			)
-=======
-
-		# the removed rows are still in self.items, so their Sales Order rows are recalculated too
-		for args in self.get_sales_order_status_updater():
-			self._update_children({**args, "cond": ""}, update_modified=True)
->>>>>>> cf91622 (fix(buying): recalculate the Sales Order ordered qty of rows removed through Update Items)
 
 	def auto_create_subcontracting_order(self):
 		if self.is_subcontracted and not self.is_old_subcontracting_flow:
