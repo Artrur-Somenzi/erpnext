@@ -141,13 +141,13 @@ class TestPurchaseOrder(FrappeTestCase):
 		)
 		self.assertEqual(mr.per_received, 100)
 
-	@ERPNextTestSuite.change_settings("Stock Settings", {"allow_to_edit_stock_uom_qty_for_purchase": 0})
+	@change_settings("Stock Settings", {"allow_to_edit_stock_uom_qty_for_purchase": 0})
 	def test_receipts_for_parts_of_a_material_request_add_up_to_its_unrounded_stock_qty(self):
 		mr = receive_material_request_in_parts()
 		self.assertEqual(mr.items[0].received_qty, mr.items[0].stock_qty)
 		self.assertEqual(mr.per_received, 100)
 
-	@ERPNextTestSuite.change_settings("Stock Settings", {"allow_to_edit_stock_uom_qty_for_purchase": 0})
+	@change_settings("Stock Settings", {"allow_to_edit_stock_uom_qty_for_purchase": 0})
 	def test_receipt_of_a_material_request_in_a_whole_number_uom_completes_it(self):
 		item = make_item(
 			properties={
